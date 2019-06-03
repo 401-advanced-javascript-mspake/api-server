@@ -5,13 +5,12 @@ process.env.SECRET = 'test';
 const jwt = require('jsonwebtoken');
 
 const Roles = require('../../../src/auth/roles-model.js');
-const server = require('../../../src/app.js').server;
-const supergoose = require('../../supergoose.js');
+const server = require('../../../src/app.js').app;
+const supergoose = require('../supergoose.js');
 
 const mockRequest = supergoose.server(server);
 
 let users = {
-  superuser: {username: 'superuser', password: 'password', role: 'superuser'},
   admin: {username: 'admin', password: 'password', role: 'admin'},
   editor: {username: 'editor', password: 'password', role: 'editor'},
   user: {username: 'user', password: 'password', role: 'user'},
@@ -80,6 +79,7 @@ describe('Roles Router', () => {
       
       let encodedToken;
       let id;
+      let teamId;
 
       it('roles route adds all roles to the database', () => {
         return mockRequest.get('/create-roles')
@@ -98,89 +98,51 @@ describe('Roles Router', () => {
           });
       });
 
-      it('anyone can access the public route', () => {
-        return mockRequest.get('/public-stuff')
+      it('anyone can access a public route', () => {
+        return mockRequest.get('/api/v1/teams')
           .then(result => {
             expect(result.status).toBe(200);            
           });
       });
 
-      it('verified users can access the hidden route', () => {
-        return mockRequest.get('/hidden-stuff')
+      it('users with create capabilities can create a team', () => {
+        return mockRequest.post('/api/v1/teams')
           .set('Authorization', `Bearer ${encodedToken}`)
-          .then(result => {
-            expect(result.status).toBe(200);            
-          });
-      });
-
-      it('users with read capabilities can access the read route', () => {
-        return mockRequest.get('/something-to-read')
-          .set('Authorization', `Bearer ${encodedToken}`)
-          .then(result => {
-            expect(result.status).toBe(200);            
-          });
-      });
-
-      it('users with create capabilities can access the create route', () => {
-        return mockRequest.post('/create-a-thing')
-          .set('Authorization', `Bearer ${encodedToken}`)
+          .send({ name: `The ${users[userType].role}s`})
           .then(result => {
             if(users[userType].role === 'user') {
               expect(result.status).toBe(500);
             } else {
+              teamId = result._id;
               expect(result.status).toBe(200);            
             }
           });
       });
 
-      it('users with update capabilities can access the update route', () => {
-        return mockRequest.put('/update')
-          .set('Authorization', `Bearer ${encodedToken}`)
-          .then(result => {
-            if(users[userType].role === 'user') {
-              expect(result.status).toBe(500);
-            } else {
-              expect(result.status).toBe(200);            
-            }
-          });
-      });
+      // xit('users with update capabilities can update a team', () => {
+      //   return mockRequest.put('`/api/v1/teams/${teamId}`')
+      //     .set('Authorization', `Bearer ${encodedToken}`)
+      //     .send({ name: `The ${users[userType].role} wizards`})
+      //     .then(result => {
+      //       if(users[userType].role === 'user') {
+      //         expect(result.status).toBe(500);
+      //       } else {
+      //         expect(result.status).toBe(200);            
+      //       }
+      //     });
+      // });
 
-      it('users with update capabilities can access the patch route', () => {
-        return mockRequest.patch('/jp')
-          .set('Authorization', `Bearer ${encodedToken}`)
-          .then(result => {
-            if(users[userType].role === 'user') {
-              expect(result.status).toBe(500);
-            } else {
-              expect(result.status).toBe(200);            
-            }
-          });
-      });
-
-      it('users with delete capabilities can access the delete route', () => {
-        return mockRequest.delete('/bye-bye')
-          .set('Authorization', `Bearer ${encodedToken}`)
-          .then(result => {
-            if(users[userType].role === 'admin' || users[userType].role === 'superuser') {
-              expect(result.status).toBe(200);            
-            } else {
-              expect(result.status).toBe(500);
-            }
-          });
-      });
-
-      it('only superusers can access the everything route', () => {
-        return mockRequest.get('/everything')
-          .set('Authorization', `Bearer ${encodedToken}`)
-          .then(result => {
-            if(users[userType].role === 'superuser') {
-              expect(result.status).toBe(200);            
-            } else {
-              expect(result.status).toBe(500);
-            }
-          });
-      });
+      // xit('users with delete capabilities can delete a team', () => {
+      //   return mockRequest.delete(`/api/v1/teams/${teamId}`)
+      //     .set('Authorization', `Bearer ${encodedToken}`)
+      //     .then(result => {
+      //       if(users[userType].role === 'admin') {
+      //         expect(result.status).toBe(200);            
+      //       } else {
+      //         expect(result.status).toBe(500);
+      //       }
+      //     });
+      // });
     });
-
   });
 });
